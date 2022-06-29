@@ -504,7 +504,7 @@ if __name__ == "__main__":
 		if args.stage_lambda:
 			neural_dir = '{}/critics_{}replicas_STAGELAM{:.1f}_beta{}'.format(base_dir, args.model_instances, args.lam_init, args.beta)
 		else:
-			neural_dir = '{}/critics_{}replicas_LAM{:.1f}'.format(base_dir, args.model_instances, args.l2)
+			neural_dir = '{}/critics_{}replicas_LAM{}'.format(base_dir, args.model_instances, args.l2)
 
 		sample_sizes = [100, 200, 300, 500, 1000]
 		if args.dim == 25 and args.stage_lambda:
