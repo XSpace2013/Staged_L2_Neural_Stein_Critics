@@ -10,7 +10,8 @@ parser = argparse.ArgumentParser()
 
 
 # main selection
-parser.add_argument('--procedure', type=str, default='compare_metrics', choices=['validation_epoch', 'neural_power', 'ksd_power', 'compare_metrics', 'compare_power', 'compare_ksd'])
+parser.add_argument('--procedure', type=str, default='compare_metrics', choices=['validation_epoch', 'neural_power', 'ksd_power', 'compare_metrics',
+	'compare_power', 'compare_ksd', 'compare_ksd_best_bw', 'compare_ksd_bw', 'compare_ksd_bw_multiple'])
 
 
 # model parameters
@@ -43,6 +44,8 @@ parser.add_argument('--model_instances', type=int, default=10)
 parser.add_argument('--n_runs', type=int, default=500)
 parser.add_argument('--n_boot', type=int, default=500)
 parser.add_argument('--stop_epoch', type=int, default=45)
+
+parser.add_argument('--bw_factor', type=float, default=1.)
 
 
 parser.set_defaults(feature=False)
@@ -206,8 +209,10 @@ if __name__ == "__main__":
 
 
 	elif args.procedure == 'ksd_power':
-
-		test_savedir = "{}/KSD_results/{}runs_{}boot_{}test".format(base_dir, args.n_runs, args.n_boot, args.n_test)
+		if args.bw_factor == 1.:
+			test_savedir = "{}/KSD_results/{}runs_{}boot_{}test".format(base_dir, args.n_runs, args.n_boot, args.n_test)
+		else:
+			test_savedir = "{}/KSD_results/{}runs_{}boot_{}test_{}bw".format(base_dir, args.n_runs, args.n_boot, args.n_test, args.bw_factor)
 
 		pows, test_stat_durations, boot_durations = [], [], []
 		for j in range(args.model_instances):
@@ -626,5 +631,279 @@ if __name__ == "__main__":
 			plt.savefig("{}/compare_ksd_time_breakdown_STAGELAM.png".format(base_dir, args.model_instances))
 		else:
 			plt.savefig("{}/compare_ksd_time_breakdown_LAM{}.png".format(base_dir, args.model_instances, args.l2))
+		plt.clf()
+		plt.close()
+
+
+
+
+	elif args.procedure == 'compare_ksd_best_bw':
+		ksd_mean_durations, ksd_std_durations = [], []
+		ksd_mean_pows, ksd_std_pows = [], []
+		ksd_mean_boot_durations, ksd_mean_stat_durations = [], []
+		ksd_std_boot_durations, ksd_std_stat_durations = [], []
+
+		neural_mean_durations, neural_std_durations = [], []
+		neural_mean_pows, neural_std_pows = [], []
+		neural_train_durations, neural_boot_durations, neural_stat_durations = [], [], []
+		neural_train_durations_std, neural_boot_durations_std, neural_stat_durations_std = [], [], []
+		neural_valid_durations = []
+
+		ksd_dir = '{}/KSD_results/{}runs_'.format(base_dir, args.n_runs)
+		if args.stage_lambda:
+			neural_dir = '{}/critics_{}replicas_STAGELAM{:.1f}_beta{}'.format(base_dir, args.model_instances, args.lam_init, args.beta)
+		else:
+			neural_dir = '{}/critics_{}replicas_LAM{}'.format(base_dir, args.model_instances, args.l2)
+
+		sample_sizes = [100, 200, 300, 500, 1000, 1500, 2500]
+		if args.dim == 50 and args.stage_lambda:
+			selected_epochs = [40, 35, 40, 40, 40, 40, 40]
+
+		for i in range(len(sample_sizes)):
+
+			if args.bw_factor == 1.:
+				ksd_mean_durations.append(np.load("{}{}boot_{}test/mean_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				ksd_std_durations.append(np.load("{}{}boot_{}test/std_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				
+				ksd_mean_boot_durations.append(np.load("{}{}boot_{}test/mean_boot_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				ksd_mean_stat_durations.append(np.load("{}{}boot_{}test/mean_test_stat_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				
+				ksd_std_boot_durations.append(np.load("{}{}boot_{}test/std_boot_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				ksd_std_stat_durations.append(np.load("{}{}boot_{}test/std_test_stat_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				
+				ksd_mean_pows.append(np.load("{}{}boot_{}test/mean_power.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+				ksd_std_pows.append(np.load("{}{}boot_{}test/std_power.npy".format(ksd_dir, args.n_boot, sample_sizes[i])))
+
+			else:
+				ksd_mean_durations.append(np.load("{}{}boot_{}test_{}bw/mean_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				ksd_std_durations.append(np.load("{}{}boot_{}test_{}bw/std_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				
+				ksd_mean_boot_durations.append(np.load("{}{}boot_{}test_{}bw/mean_boot_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				ksd_mean_stat_durations.append(np.load("{}{}boot_{}test_{}bw/mean_test_stat_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				
+				ksd_std_boot_durations.append(np.load("{}{}boot_{}test_{}bw/std_boot_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				ksd_std_stat_durations.append(np.load("{}{}boot_{}test_{}bw/std_test_stat_duration.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				
+				ksd_mean_pows.append(np.load("{}{}boot_{}test_{}bw/mean_power.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+				ksd_std_pows.append(np.load("{}{}boot_{}test_{}bw/std_power.npy".format(ksd_dir, args.n_boot, sample_sizes[i], args.bw_factor)))
+			
+
+			neural_sample_dir = '{}_{}sample'.format(neural_dir, sample_sizes[i])
+			
+			neural_mean_durations.append(np.load("{}/mean_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			neural_std_durations.append(np.load("{}/std_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+
+			neural_train_durations.append(np.load("{}/mean_train_duration.npy".format(neural_sample_dir)))
+			neural_valid_durations.append(np.load("{}/valid_time.npy".format(neural_sample_dir)))
+			neural_boot_durations.append(np.load("{}/mean_boot_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			neural_stat_durations.append(np.load("{}/mean_test_stat_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			
+			neural_train_durations_std.append(np.load("{}/std_train_duration.npy".format(neural_sample_dir)))
+			neural_boot_durations_std.append(np.load("{}/std_boot_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			neural_stat_durations_std.append(np.load("{}/std_test_stat_duration_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			
+			neural_mean_pows.append(np.load("{}/mean_power_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+			neural_std_pows.append(np.load("{}/std_power_epoch{}_{}runs_{}boot.npy".format(neural_sample_dir, selected_epochs[i], args.n_runs, args.n_boot)))
+
+
+		plt.figure(figsize=(9,7), facecolor='white', dpi=300)
+
+		plt.errorbar(sample_sizes, neural_mean_pows, yerr=neural_std_pows, c='k', marker="x")
+		plt.plot(sample_sizes, neural_mean_pows, c='k', label='Neural')
+
+		plt.errorbar(sample_sizes, ksd_mean_pows, yerr=ksd_std_pows, c='r', marker="x")
+		plt.plot(sample_sizes, ksd_mean_pows, c='r', label='KSD')
+
+		plt.title('Power Comparison',fontsize=28)
+		plt.xlabel("Sample Size",fontsize=28)
+		plt.ylabel("Testing Power",fontsize=28)
+		plt.xticks(fontsize=24)
+		plt.yticks(fontsize=24)
+		plt.grid()
+		plt.legend(fontsize=24)
+		plt.tight_layout()
+		if args.stage_lambda:
+			plt.savefig("{}/compare_ksd_{}bw_power_STAGELAM.png".format(base_dir, args.bw_factor))
+		else:
+			plt.savefig("{}/compare_ksd_{}bw_power_LAM{}.png".format(base_dir, args.bw_factor, args.l2))
+		plt.clf()
+		plt.close()
+
+
+		plt.figure(figsize=(9,7), facecolor='white', dpi=300)
+
+		neural_whole_time_mean = np.array(neural_train_durations)+np.array(neural_stat_durations)+np.array(neural_boot_durations)+np.array(neural_valid_durations)
+		neural_whole_time_std = np.power(np.power(np.array(neural_train_durations_std), 2) + np.power(np.array(neural_stat_durations_std), 2) + np.power(np.array(neural_boot_durations_std), 2), 0.5)
+
+		plt.errorbar(sample_sizes, neural_whole_time_mean, yerr=neural_whole_time_std, c='k', marker="x")
+		plt.plot(sample_sizes, neural_whole_time_mean, c='k', label='Neural')
+
+		ksd_whole_time_mean = np.array(ksd_mean_stat_durations)+np.array(ksd_mean_boot_durations)
+		ksd_whole_time_std = np.power(np.power(np.array(ksd_std_stat_durations), 2) + np.power(np.array(ksd_std_boot_durations), 2), 0.5)
+
+		plt.errorbar(sample_sizes, ksd_whole_time_mean, yerr=ksd_whole_time_std, c='r', marker="x")
+		plt.plot(sample_sizes, ksd_whole_time_mean, c='r', label='KSD')
+
+		plt.title('Total Time Comparison',fontsize=28)
+		plt.xlabel("Sample Size",fontsize=28)
+		plt.ylabel("Time (s)",fontsize=28)
+		plt.xticks(fontsize=24)
+		plt.yticks(fontsize=24)
+		plt.grid()
+		plt.legend(fontsize=24)
+		plt.tight_layout()
+		if args.stage_lambda:
+			plt.savefig("{}/compare_ksd_{}bw_time_STAGELAM.png".format(base_dir, args.bw_factor))
+		else:
+			plt.savefig("{}/compare_ksd_{}bw_time_LAM{}.png".format(base_dir, args.bw_factor, args.l2))
+		plt.clf()
+		plt.close()
+
+
+		plt.figure(figsize=(9,7), facecolor='white', dpi=300)
+
+		neural_whole_test_stat_mean = np.array(neural_train_durations)+np.array(neural_stat_durations)+np.array(neural_valid_durations)
+		neural_whole_test_stat_std = np.power(np.power(np.array(neural_train_durations_std), 2) + np.power(np.array(neural_stat_durations_std), 2), 0.5)
+
+		plt.errorbar(sample_sizes, neural_whole_test_stat_mean, yerr=neural_whole_test_stat_std, c='k', ls='-.', marker="x")
+		plt.plot(sample_sizes, neural_whole_test_stat_mean, ls='-.', c='k', label='Neural Test Statistic')
+
+		plt.errorbar(sample_sizes, neural_boot_durations, yerr=neural_boot_durations_std, c='k', ls='--', marker="x")
+		plt.plot(sample_sizes, neural_boot_durations, c='k', ls='--', label=r'Neural Bootstrap $(n=500)$')
+
+		plt.errorbar(sample_sizes, ksd_mean_stat_durations, yerr=ksd_std_stat_durations, c='r', ls='-.', marker="x")
+		plt.plot(sample_sizes, ksd_mean_stat_durations, c='r', ls='-.', label='KSD Test Statistic')
+
+		plt.errorbar(sample_sizes, ksd_mean_boot_durations, yerr=ksd_std_boot_durations, c='r', ls='--', marker="x")
+		plt.plot(sample_sizes, ksd_mean_boot_durations, c='r', ls='--', label=r'KSD Bootstrap $(n=500)$')
+
+		plt.title('Breakdown Time Comparison',fontsize=28)
+		plt.xlabel("Sample Size",fontsize=28)
+		plt.ylabel("Time (s)",fontsize=28)
+		plt.xticks(fontsize=24)
+		plt.yticks(fontsize=24)
+		plt.grid()
+		plt.legend(fontsize=24)
+		plt.tight_layout()
+		if args.stage_lambda:
+			plt.savefig("{}/compare_ksd_{}bw_time_breakdown_STAGELAM.png".format(base_dir, args.bw_factor))
+		else:
+			plt.savefig("{}/compare_ksd_{}bw_time_breakdown_LAM{}.png".format(base_dir, args.bw_factor, args.l2))
+		plt.clf()
+		plt.close()
+
+
+
+
+	elif args.procedure == 'compare_ksd_bw':
+		if args.stage_lambda:
+			neural_dir = '{}/critics_{}replicas_STAGELAM{:.1f}_beta{}_{}sample'.format(base_dir, args.model_instances, args.lam_init, args.beta, args.n_test)
+		else:
+			neural_dir = '{}/critics_{}replicas_LAM{}_{}sample'.format(base_dir, args.model_instances, args.l2, args.n_test)
+
+		if args.n_test == 500:
+			selected_epoch = 40
+		elif args.n_test == 750:
+			selected_epoch = 30
+		elif args.n_test == 800:
+			selected_epoch = 35
+		elif args.n_test == 1000:
+			selected_epoch = 40
+		elif args.n_test == 1500:
+			selected_epoch = 40
+
+		neural_mean_pow = np.load("{}/mean_power_epoch{}_{}runs_{}boot.npy".format(neural_dir, selected_epoch, args.n_runs, args.n_boot))
+		neural_std_pow = np.load("{}/std_power_epoch{}_{}runs_{}boot.npy".format(neural_dir, selected_epoch, args.n_runs, args.n_boot))
+		
+		bws = [0.015625, 0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0]
+		ksd_mean_pows, ksd_std_pows = [], []
+
+		ksd_dir = '{}/KSD_results/{}runs_{}boot_{}test'.format(base_dir, args.n_runs, args.n_boot, args.n_test)
+		for i in range(len(bws)):
+			if bws[i] == 1.:
+				ksd_mean_pows.append(np.load("{}/mean_power.npy".format(ksd_dir)))
+				ksd_std_pows.append(np.load("{}/std_power.npy".format(ksd_dir)))
+			else:
+				ksd_mean_pows.append(np.load("{}_{}bw/mean_power.npy".format(ksd_dir, bws[i])))
+				ksd_std_pows.append(np.load("{}_{}bw/std_power.npy".format(ksd_dir, bws[i])))
+
+		plt.figure(figsize=(9,7), facecolor='white', dpi=300)
+
+		plt.errorbar(bws, ksd_mean_pows, yerr=ksd_std_pows, c='r', marker="x")
+		plt.plot(bws, ksd_mean_pows, c='r', label='KSD')
+
+		plt.axhline(neural_mean_pow, c='k', label='Neural')
+		plt.axhspan(neural_mean_pow-neural_std_pow, neural_mean_pow+neural_std_pow, color='k', alpha=0.1)
+		
+		plt.ylim(-0.05, 1.05)
+		plt.xscale('log')
+
+		plt.title('Bandwidth Power Comparison',fontsize=28)
+		plt.xlabel("Bandwidth Multiplicative Factor",fontsize=28)
+		plt.ylabel("Testing Power",fontsize=28)
+		plt.xticks(fontsize=24)
+		plt.yticks(fontsize=24)
+		plt.grid()
+		plt.legend(fontsize=24)
+		plt.tight_layout()
+		if args.stage_lambda:
+			plt.savefig("{}/compare_ksd_bw_STAGELAM_{}test.png".format(base_dir, args.n_test))
+		else:
+			plt.savefig("{}/compare_ksd_bw_LAM{}_{}test.png".format(base_dir, args.l2, args.n_test))
+		plt.clf()
+		plt.close()
+
+
+
+
+	elif args.procedure == 'compare_ksd_bw_multiple':
+		sample_sizes = [500, 750, 800, 1000, 1500]
+		selected_epochs = [40, 30, 35, 35, 25]
+		bws = [0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0]
+		
+		fig, ax = plt.subplots(1, len(sample_sizes), figsize=(9*len(sample_sizes),7), facecolor='white', dpi=300)
+		for k in range(len(sample_sizes)):
+			if args.stage_lambda:
+				neural_dir = '{}/critics_{}replicas_STAGELAM{:.1f}_beta{}_{}sample'.format(base_dir, args.model_instances, args.lam_init, args.beta, sample_sizes[k])
+			else:
+				neural_dir = '{}/critics_{}replicas_LAM{}_{}sample'.format(base_dir, args.model_instances, args.l2, sample_sizes[k])
+
+			selected_epoch = selected_epochs[k]
+
+			neural_mean_pow = np.load("{}/mean_power_epoch{}_{}runs_{}boot.npy".format(neural_dir, selected_epoch, args.n_runs, args.n_boot))
+			neural_std_pow = np.load("{}/std_power_epoch{}_{}runs_{}boot.npy".format(neural_dir, selected_epoch, args.n_runs, args.n_boot))
+			
+			ksd_mean_pows, ksd_std_pows = [], []
+
+			ksd_dir = '{}/KSD_results/{}runs_{}boot_{}test'.format(base_dir, args.n_runs, args.n_boot, sample_sizes[k])
+			for i in range(len(bws)):
+				if bws[i] == 1.:
+					ksd_mean_pows.append(np.load("{}/mean_power.npy".format(ksd_dir)))
+					ksd_std_pows.append(np.load("{}/std_power.npy".format(ksd_dir)))
+				else:
+					ksd_mean_pows.append(np.load("{}_{}bw/mean_power.npy".format(ksd_dir, bws[i])))
+					ksd_std_pows.append(np.load("{}_{}bw/std_power.npy".format(ksd_dir, bws[i])))
+
+
+			ax[k].errorbar(bws, ksd_mean_pows, yerr=ksd_std_pows, c='k', marker="x")
+			ax[k].plot(bws, ksd_mean_pows, c='k')
+
+			ax[k].axhline(neural_mean_pow, c='r', label='Neural Critic Power')
+			ax[k].axhspan(neural_mean_pow-neural_std_pow, neural_mean_pow+neural_std_pow, color='r', alpha=0.1)
+			
+			ax[k].set_ylim(-0.05, 1.05)
+			ax[k].set_xscale('log')
+
+			ax[k].set_title('Sample Size: {}'.format(sample_sizes[k]),fontsize=28)
+			ax[k].set_xlabel("Bandwidth Multiplicative Factor",fontsize=28)
+			ax[k].set_ylabel("Testing Power",fontsize=28)
+			ax[k].tick_params(axis='both',labelsize=24)
+			ax[k].grid()
+			ax[k].legend(fontsize=24)
+		plt.tight_layout()
+		if args.stage_lambda:
+			plt.savefig("{}/compare_ksd_bw_multiple_STAGELAM.png".format(base_dir))
+		else:
+			plt.savefig("{}/compare_ksd_bw_multiple_LAM{}.png".format(base_dir, args.l2))
 		plt.clf()
 		plt.close()

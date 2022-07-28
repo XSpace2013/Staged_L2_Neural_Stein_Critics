@@ -55,6 +55,7 @@ class HypothesisTester:
 		self.alpha = args.alpha
 		self.n_runs = args.n_runs
 		self.n_boot = args.n_boot
+		self.bw_factor = args.bw_factor
 
 
 	def generate_true_dist(self):
@@ -210,7 +211,7 @@ class HypothesisTester:
 			data_test = self.true_dist.sample(self.data_test.shape[0]).requires_grad_().to(self.device)
 			dist_mat = torch.cdist(data_test, data_test, p=2)
 			rbf_bw = float(dist_mat.flatten()[dist_mat.triu().flatten().nonzero()].median())
-			rbf_bw = 2 * (rbf_bw**2)
+			rbf_bw = 2 * (rbf_bw**2) * self.bw_factor
 			KSD_tester = KSD(self.model_dist, rbf_bw)
 
 			p, test_stat_duration, boot_duration = KSD_tester.is_from_null(self.alpha, data_test, 0.1, self.n_boot, start_time)

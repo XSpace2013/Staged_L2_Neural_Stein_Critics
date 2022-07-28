@@ -2,7 +2,7 @@
 
 > Implementation of code needed to reproduce the experiments found in:
 
-> M. Repasky, X. Cheng, & Y. Xie. "Neural Stein critics with staged $L^2$-regularization".
+> M. Repasky, X. Cheng, & Y. Xie. "Neural Stein critics with staged $L^2$-regularization". (https://arxiv.org/abs/2207.03406)
 
 <!-- ## Table of Contents
 * [High-Dimensional Gaussian Mixture](#high-dimensional-gaussian-mixture)

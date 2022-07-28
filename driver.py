@@ -61,6 +61,8 @@ parser.add_argument('--n_runs', type=int, default=1)
 parser.add_argument('--n_boot', type=int, default=500)
 parser.add_argument('--alpha', type=float, default=.05)
 
+parser.add_argument('--bw_factor', type=float, default=1.)
+
 
 # model loading parameters
 parser.add_argument('--model_instances', type=int, default=20)
@@ -278,7 +280,10 @@ if __name__ == "__main__":
 
 
 	elif args.procedure == 'ksd_power':
-		base_savedir = "{}/KSD_results/{}runs_{}boot_{}test".format(base_dir, args.n_runs, args.n_boot, args.n_test)
+		if args.bw_factor == 1.:
+			base_savedir = "{}/KSD_results/{}runs_{}boot_{}test".format(base_dir, args.n_runs, args.n_boot, args.n_test)
+		else:
+			base_savedir = "{}/KSD_results/{}runs_{}boot_{}test_{}bw".format(base_dir, args.n_runs, args.n_boot, args.n_test, args.bw_factor)
 
 		if args.mnist:
 			# this is only for non-mnist experiments
